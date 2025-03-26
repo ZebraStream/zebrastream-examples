@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Viewer Terminal</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            color: #00ff00;
+            font-family: "Consolas", "Monaco", "Courier New", monospace;
+        }
+        #terminal {
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+            overflow-y: auto;
+            overflow-x: auto;
+            white-space: pre;
+            box-sizing: border-box;
+        }
+        #terminal::before {
+            content: " > Welcome to the Log Viewer Terminal\A";
+            white-space: pre;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a1a;
+            padding: 20px;
+            border: 1px solid #00ff00;
+            z-index: 1000;
+            width: 600px; /* Added width */
+        }
+        .modal input {
+            width: 100%;
+            margin: 5px 0;
+            padding: 5px;
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            font-family: inherit;
+        }
+        .modal button {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal"></div>
+    <div id="inputModal" class="modal">
+        <form id="inputForm">
+            <div>ZebraStream URL:</div>
+            <input type="text" id="urlInput" required>
+            <div>Access Token (optional):</div>
+            <input type="password" id="tokenInput">
+            <br>
+            <button type="submit">OK</button>
+        </form>
+    </div>
+
+    <script>
+        const terminal = document.getElementById('terminal');
+        const unixPrompt = () => " > ";
+
+        function appendToTerminal(text) {
+            const formattedText = text.replace(/\r?\n/g, "\n");
+            terminal.textContent += formattedText + "\n";
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function appendSystemMessage(text) {
+            terminal.textContent += unixPrompt() + text + "\n";
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        async function fetchWithRetry(url, token = null, maxRetries = 5, retryDelay = 1000) {
+            let attempts = 0;
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+            while (attempts < maxRetries) {
+                try {
+                    const response = await fetch(url, { headers });
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        attempts = 0; // Reset attempts when data is received
+                        appendToTerminal(decoder.decode(value, { stream: true }));
+                    }
+
+                    appendSystemMessage("Remote stream closed.");
+                    return;
+                } catch (error) {
+                    const isRetriableError = 
+                        (error.name === 'TypeError' && error.message.includes('NetworkError')) ||
+                        error.message.includes('Error in input stream') ||
+                        error.message.includes('Failed to fetch') ||
+                        error.message.includes('The operation was aborted');
+                        
+                    if (isRetriableError) {
+                        attempts++; // Only increment attempts on connection failures
+                        appendSystemMessage(`Remote stream interrupted. Retrying... (attempt ${attempts}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    } else {
+                        appendSystemMessage(`Error: ${error.message} (${error.name})`);
+                        return;
+                    }
+                }
+            }
+
+            appendSystemMessage("Max retries reached. Connection failed.");
+        }
+
+        function showInputDialog() {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('inputModal');
+                const form = document.getElementById('inputForm');
+                
+                modal.style.display = 'block';
+                
+                form.onsubmit = (e) => {
+                    e.preventDefault();
+                    const url = document.getElementById('urlInput').value;
+                    const token = document.getElementById('tokenInput').value;
+                    modal.style.display = 'none';
+                    form.reset();
+                    resolve({ url, token });
+                };
+            });
+        }
+
+        document.addEventListener('keypress', async (event) => {
+            if (event.key === 'Enter') {
+                const { url, token } = await showInputDialog();
+                if (!url) {
+                    appendSystemMessage("Error: No URL entered.");
+                    return;
+                }
+                appendSystemMessage(`Fetching ${url}...`);
+                await fetchWithRetry(url, token || null);
+            }
+        });
+
+        appendSystemMessage("[Press Enter to fetch data]");
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typewriter Effect</title>
+    <style>
+        body {
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        #output {
+            font-size: 3rem;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="output"></div>
+    <script>
+        const output = document.getElementById('output');
+        const lines = [];
+        let currentLineIndex = 0;
+        let currentCharIndex = 0;
+
+        function typeNextChar() {
+            if (currentLineIndex >= lines.length) return;
+
+            const line = lines[currentLineIndex];
+            if (currentCharIndex < line.length) {
+                const span = document.createElement('span');
+                span.textContent = line[currentCharIndex];
+                span.style.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                output.appendChild(span);
+                currentCharIndex++;
+                setTimeout(typeNextChar, 100);
+            } else {
+                output.appendChild(document.createElement('br'));
+                currentLineIndex++;
+                currentCharIndex = 0;
+                setTimeout(typeNextChar, 500);
+            }
+        }
+
+        function processData(data) {
+            lines.push(...data.split('\n').filter(line => line.trim() !== ''));
+            if (currentLineIndex === 0 && currentCharIndex === 0) {
+                typeNextChar();
+            }
+        }
+
+        // For streaming response
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        function readStream() {
+            const reader = new ReadableStream({
+                start(controller) {
+                    function push() {
+                        const chunk = document.body.innerText;
+                        if (chunk.length > 0) {
+                            controller.enqueue(chunk);
+                        }
+                        setTimeout(push, 100);
+                    }
+                    push();
+                }
+            }).getReader();
+
+            reader.read().then(function process({ done, value }) {
+                if (done) return;
+                buffer += value;
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+                processData(lines.join('\n'));
+                return reader.read().then(process);
+            });
+        }
+
+        readStream();
+    </script>
+</body>
+</html>
+

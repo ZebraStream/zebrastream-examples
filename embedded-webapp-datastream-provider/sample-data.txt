@@ -1,0 +1,6 @@
+Welcome to the typewriter effect!
+Each line will appear one by one.
+The text will be displayed in rainbow colors.
+This works as a streaming response.
+Enjoy the colorful animation!
+
