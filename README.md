@@ -4,7 +4,7 @@ A collection of examples demonstrating different usage patterns of [ZebraStream]
 
 ## Examples Overview
 
-### [Embedded Webapp Data Stream Provider](embedded-webapp-provider/README.md)
+### [Embedded Webapp Data Stream Provider](embedded-webapp-datastream-provider/README.md)
 A demonstration of embedding a web application at the start of a data stream. Shows how to combine a web app with its data stream in a single streaming response. Features a colorful typewriter animation driven by streaming text data.
 
 ### [Logviewer Web App Consumer](logviewer-webapp-consumer/README.md)
