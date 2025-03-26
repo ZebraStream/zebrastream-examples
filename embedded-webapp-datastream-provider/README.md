@@ -2,11 +2,12 @@
 
 **A simple web application that creates a typewriter effect with rainbow-colored text from streaming data.**
 
-This example shows how to embed a web application data consumer at the beginning of a data stream. It can be generalized to any kind of single-shot data-driven web application, like a map showing the current position of a vehicle on a map. The main advantage of this approach is, that the producer can control the livecycle of the consumer application completely, and that it only requires a single stream to deliver it.
+This example demonstrates how to add a web application data consumer to the beginning of a data stream. It can be applied to any single-shot data-driven web application, such as displaying a vehicle's current position on a map. The main advantage of this approach is that the producer has complete control over the lifecycle of the consumer application, and it only requires a single stream to deliver it.
 
 ## Description
 
 The application consists of two main components that must be combined into a single streaming response:
+
 - A web application (`typewriter-webapp.html`) that displays text with a typewriter effect
 - A sample data file (`sample-data.txt`) containing the text to be displayed
 
@@ -22,9 +23,9 @@ The application consists of two main components that must be combined into a sin
 To use this example with ZebraStream:
 
 Create a producer that:
- - First sends the complete content of `typewriter-webapp.html`
- - Then streams the content of `sample-data.txt` or similar data, that can be generated dynamically.
 
+- First sends the complete content of `typewriter-webapp.html`
+- Then streams the content of `sample-data.txt` or similar data, that can be generated dynamically.
 
 ## Features
 
@@ -36,6 +37,7 @@ Create a producer that:
 ## How to Use
 
 1. Set up the files:
+   
    - Place `typewriter-webapp.html` and `sample-data.txt` in the same directory
    - Ensure `sample-data.txt` contains the text you want to display (one sentence per line)
 
@@ -56,6 +58,7 @@ The text will be displayed in rainbow colors.
 ## Technical Details
 
 The web application uses:
+
 - HTML5 Streams API for processing the incoming data stream
 - JavaScript for animation control
 - CSS for styling and layout
@@ -65,6 +68,7 @@ The web application uses:
 ## Customization
 
 You can modify the following aspects:
+
 - Animation speed: Change the timeout values in `typewriter-webapp.html`
 - Font size and styling: Modify the CSS in `typewriter-webapp.html`
 - Text content: Edit `sample-data.txt` or replace it by a dynamic process that outputs phrases or sentences.
