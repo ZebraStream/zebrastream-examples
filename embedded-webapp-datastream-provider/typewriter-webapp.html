@@ -30,7 +30,11 @@
         let currentCharIndex = 0;
 
         function typeNextChar() {
-            if (currentLineIndex >= lines.length) return;
+            if (currentLineIndex >= lines.length) {
+                // Wait for more lines instead of returning
+                setTimeout(typeNextChar, 100);
+                return;
+            }
 
             const line = lines[currentLineIndex];
             if (currentCharIndex === 0) {
@@ -78,3 +82,5 @@
     </script>
 </body>
 </html>
+
+...
