@@ -33,6 +33,10 @@
             if (currentLineIndex >= lines.length) return;
 
             const line = lines[currentLineIndex];
+            if (currentCharIndex === 0) {
+                output.innerHTML = ''; // Clear previous line
+            }
+            
             if (currentCharIndex < line.length) {
                 const span = document.createElement('span');
                 span.textContent = line[currentCharIndex];
@@ -41,10 +45,9 @@
                 currentCharIndex++;
                 setTimeout(typeNextChar, 100);
             } else {
-                output.appendChild(document.createElement('br'));
                 currentLineIndex++;
                 currentCharIndex = 0;
-                setTimeout(typeNextChar, 500);
+                setTimeout(typeNextChar, 1000); // Longer delay between lines
             }
         }
 
@@ -55,36 +58,23 @@
             }
         }
 
-        // For streaming response
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        function readStream() {
-            const reader = new ReadableStream({
-                start(controller) {
-                    function push() {
-                        const chunk = document.body.innerText;
-                        if (chunk.length > 0) {
-                            controller.enqueue(chunk);
-                        }
-                        setTimeout(push, 100);
+        // Set up an observer to watch for text nodes added after the script
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+                        processData(node.textContent);
+                        node.remove(); // Remove processed text to keep DOM clean
                     }
-                    push();
                 }
-            }).getReader();
+            }
+        });
 
-            reader.read().then(function process({ done, value }) {
-                if (done) return;
-                buffer += value;
-                const lines = buffer.split('\n');
-                buffer = lines.pop();
-                processData(lines.join('\n'));
-                return reader.read().then(process);
-            });
-        }
-
-        readStream();
+        // Start observing the body for added text nodes
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
     </script>
 </body>
 </html>
-

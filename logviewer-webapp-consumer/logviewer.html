@@ -77,6 +77,8 @@
         const terminal = document.getElementById('terminal');
         const unixPrompt = () => " > ";
 
+        let currentController = null;
+
         function appendToTerminal(text) {
             const formattedText = text.replace(/\r?\n/g, "\n");
             terminal.textContent += formattedText + "\n";
@@ -89,12 +91,21 @@
         }
 
         async function fetchWithRetry(url, token = null, maxRetries = 5, retryDelay = 1000) {
+            // Cleanup previous connection
+            if (currentController) {
+                currentController.abort();
+            }
+            
+            currentController = new AbortController();
             let attempts = 0;
             const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
             while (attempts < maxRetries) {
                 try {
-                    const response = await fetch(url, { headers });
+                    const response = await fetch(url, { 
+                        headers,
+                        signal: currentController.signal 
+                    });
                     if (!response.ok) {
                         throw new Error(`HTTP error! Status: ${response.status}`);
                     }
@@ -105,21 +116,26 @@
                     while (true) {
                         const { value, done } = await reader.read();
                         if (done) break;
-                        attempts = 0; // Reset attempts when data is received
+                        attempts = 0;
                         appendToTerminal(decoder.decode(value, { stream: true }));
                     }
 
                     appendSystemMessage("Remote stream closed.");
                     return;
                 } catch (error) {
+                    const isAborted = error.name === 'AbortError';
+                    if (isAborted) {
+                        // Don't retry on user abort, just return
+                        return;
+                    }
+
                     const isRetriableError = 
                         (error.name === 'TypeError' && error.message.includes('NetworkError')) ||
                         error.message.includes('Error in input stream') ||
-                        error.message.includes('Failed to fetch') ||
-                        error.message.includes('The operation was aborted');
+                        error.message.includes('Failed to fetch');
                         
                     if (isRetriableError) {
-                        attempts++; // Only increment attempts on connection failures
+                        attempts++;
                         appendSystemMessage(`Remote stream interrupted. Retrying... (attempt ${attempts}/${maxRetries})`);
                         await new Promise(resolve => setTimeout(resolve, retryDelay));
                     } else {
@@ -159,6 +175,17 @@
                 }
                 appendSystemMessage(`Fetching ${url}...`);
                 await fetchWithRetry(url, token || null);
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            // Check for Ctrl+C or Cmd+C
+            if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+                if (currentController) {
+                    currentController.abort();
+                    appendSystemMessage('Connection aborted by user (Ctrl+C)');
+                    appendSystemMessage('[Press Enter to fetch data]');
+                }
             }
         });
 
