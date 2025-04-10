@@ -10,6 +10,9 @@ A demonstration of embedding a web application at the start of a data stream. Sh
 ### [Logviewer Web App Consumer](logviewer-webapp-consumer/README.md)
 A terminal-style web application that consumes streaming log data. Demonstrates how to build an interactive web client that can connect to and display live data streams, with features like auto-reconnect and authentication support.
 
+### [Python Speech Recognition](python-speech-recognition/README.md)
+A distributed speech-to-text system that streams audio from one device to another for real-time transcription. Demonstrates how to use ZebraStream for binary data streaming between Python applications.
+
 ## Project Structure
 
 Each example is contained in its own directory and includes:
