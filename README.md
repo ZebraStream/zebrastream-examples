@@ -13,6 +13,9 @@ A terminal-style web application that consumes streaming log data. Demonstrates 
 ### [Python Speech Recognition](python-speech-recognition/README.md)
 A distributed speech-to-text system that streams audio from one device to another for real-time transcription. Demonstrates how to use ZebraStream for binary data streaming between Python applications.
 
+### [Bash Producer Client](bash/README.md)
+A robust bash script for streaming command output through ZebraStream. Demonstrates how to build a reliable producer client with minimal dependencies, featuring automatic reconnection, exponential backoff, and proper process management.
+
 ## Project Structure
 
 Each example is contained in its own directory and includes:
