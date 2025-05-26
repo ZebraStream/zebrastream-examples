@@ -22,6 +22,7 @@ fi
 : "${ZEBRASTREAM_CONNECT_URL:=https://connect.zebrastream.io/v0}"
 : "${ZEBRASTREAM_MAX_RETRIES:=5}"
 : "${ZEBRASTREAM_RETRY_DELAY:=5}"
+: "${ZEBRASTREAM_CONTENT_TYPE:=text/plain}"
 
 bearer="${ZEBRASTREAM_ACCESSTOKEN}"
 path="${ZEBRASTREAM_PATH}"
@@ -105,6 +106,7 @@ while true; do
          --connect-timeout 10 \
          --expect100-timeout 180 \
          --header "Authorization: Bearer ${bearer}" \
+         --header "Content-Type: ${ZEBRASTREAM_CONTENT_TYPE}" \
          "${stream_url}" || {
         log ERROR "Upload failed with exit code $?"
     }
