@@ -25,6 +25,19 @@ fi
 : "${ZEBRASTREAM_RETRY_DELAY:=5}"  # initial delay in seconds for retrying connection attempts
 : "${ZEBRASTREAM_MIN_DISCONNECT_SECONDS:=60}"  # minimum runtime in seconds to consider a disconnect
 : "${ZEBRASTREAM_CONTENT_TYPE:=text/plain}"  # content type for the data being sent
+: "${ZEBRASTREAM_READ_MODE:=blocking}"  # read mode for the stream
+
+# Validate read mode
+case "${ZEBRASTREAM_READ_MODE}" in
+    blocking|nonblocking) ;;
+    *)
+        log ERROR "Invalid ZEBRASTREAM_READ_MODE '${ZEBRASTREAM_READ_MODE}'. Must be 'blocking' or 'nonblocking'"
+        exit 1
+        ;;
+esac
+
+# Set curl upload mode based on read mode
+upload_source=$([ "${ZEBRASTREAM_READ_MODE}" = "blocking" ] && echo "-" || echo ".")
 
 bearer="${ZEBRASTREAM_ACCESSTOKEN}"
 path="${ZEBRASTREAM_PATH}"
@@ -118,7 +131,7 @@ while true; do
     curl --silent --fail \
          -w '%{http_code} %{http_version} %{url_effective}\n' \
          --request PUT \
-         --upload-file . \
+         --upload-file "${upload_source}" \
          --no-buffer \
          --http1.1 \
          --connect-timeout 10 \
