@@ -31,19 +31,23 @@ export ZEBRASTREAM_PATH="/your/stream/path"
 
 Optional settings:
 ```bash
-export ZEBRASTREAM_CONNECT_URL="https://connect.zebrastream.io/v0"  # default
-export ZEBRASTREAM_MAX_RETRIES=5                                    # default
-export ZEBRASTREAM_RETRY_DELAY=5                                    # default
+
+export ZEBRASTREAM_CONNECT_URL="https://connect.zebrastream.io/v0"  # default using global ZebraStream Connect API
+export ZEBRASTREAM_MAX_RETRIES=5                                    # default, number of retries after connection errors
+export ZEBRASTREAM_RETRY_DELAY=5                                    # default, initial retry timeout for exponential backoff
+export ZEBRASTREAM_MIN_DISCONNECT_SECONDS=60                        # default, minimum duration to classify a connection error a disconnect
+export ZEBRASTREAM_CONTENT_TYPE="text/plain"                        # default, change to any valid Tontent-Type header value
+export ZEBRASTREAM_READ_MODE="blocking"                             # default 'blocking', can be set to 'nonblocking'
 ```
 
 ## Usage
 
 ```bash
 # Stream a log file
-./zebrastream-producer.bash tail -f /var/log/syslog
+ZEBRASTREAM_READ_MODE='nonblocking' ./zebrastream-producer.bash tail -f /var/log/syslog
 
 # Stream command output
-./zebrastream-producer.bash journalctl -f
+ZEBRASTREAM_READ_MODE='nonblocking' ./zebrastream-producer.bash journalctl -f
 
 # Use with any command that produces output
 ./zebrastream-producer.bash vmstat 1
@@ -57,6 +61,7 @@ export ZEBRASTREAM_RETRY_DELAY=5                                    # default
 - Clean process termination
 - Structured logging
 - Support for interruption (Ctrl+C)
+- Support for both blocking and non-blocking read modes (note that some older curl versions seem to have problems with non-blocking read mode, so the default is blocking)
 
 ## Limitations
 
@@ -84,5 +89,6 @@ journalctl -f | grep -v DEBUG | sed 's/^/[myapp] /'
 
 Then use it with:
 ```bash
+export ZEBRASTREAM_READ_MODE='nonblocking'
 ./zebrastream-producer.bash ./wrapper.sh
 ```
