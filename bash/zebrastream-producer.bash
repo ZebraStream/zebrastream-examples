@@ -5,6 +5,7 @@
 # Simplifications:
 # - no check if producer command fails - no latency added
 # - producer command supports no shell features (e.g. pipes, redirections), use a wrapper script if needed
+# - API and network failures are determined by curl exit code and command duration (less than ZEBRASTREAM_MIN_DISCONNECT_SECONDS) 
 
 set -euo pipefail
 export LC_ALL=C
@@ -17,12 +18,13 @@ if [ $# -eq 0 ]; then
 fi
 
 # Configuration via environment variables with defaults
-: "${ZEBRASTREAM_ACCESSTOKEN:?Missing required env var ZEBRASTREAM_ACCESSTOKEN}"
-: "${ZEBRASTREAM_PATH:?Missing required env var ZEBRASTREAM_PATH}"
-: "${ZEBRASTREAM_CONNECT_URL:=https://connect.zebrastream.io/v0}"
-: "${ZEBRASTREAM_MAX_RETRIES:=5}"
-: "${ZEBRASTREAM_RETRY_DELAY:=5}"
-: "${ZEBRASTREAM_CONTENT_TYPE:=text/plain}"
+: "${ZEBRASTREAM_ACCESSTOKEN:?Missing required env var ZEBRASTREAM_ACCESSTOKEN}"  # write access token for authentication
+: "${ZEBRASTREAM_PATH:?Missing required env var ZEBRASTREAM_PATH}"  # path to the stream
+: "${ZEBRASTREAM_CONNECT_URL:=https://connect.zebrastream.io/v0}"  # default connection URL
+: "${ZEBRASTREAM_MAX_RETRIES:=5}"  # maximum number of retries for establishing a connection in case of errors
+: "${ZEBRASTREAM_RETRY_DELAY:=5}"  # initial delay in seconds for retrying connection attempts
+: "${ZEBRASTREAM_MIN_DISCONNECT_SECONDS:=60}"  # minimum runtime in seconds to consider a disconnect
+: "${ZEBRASTREAM_CONTENT_TYPE:=text/plain}"  # content type for the data being sent
 
 bearer="${ZEBRASTREAM_ACCESSTOKEN}"
 path="${ZEBRASTREAM_PATH}"
@@ -46,29 +48,45 @@ cleanup() {
 # Set up signal handlers
 trap cleanup EXIT INT TERM
 
-# Exponential backoff function
+# Retry function with exponential backoff
 retry_with_backoff() {
     local max_attempts="$1"
     local attempt=1
     local delay="${ZEBRASTREAM_RETRY_DELAY}"
+    local min_runtime="${ZEBRASTREAM_MIN_DISCONNECT_SECONDS}"
 
-    until "$2" || [ "$attempt" -eq "$max_attempts" ]; do
+    while true; do
+        local start_time="$(date +%s)"
+        if "$2"; then
+            return 0
+        fi
+        local end_time="$(date +%s)"
+        local runtime="$((end_time - start_time))"
+
+        if [ $runtime -ge $min_runtime ]; then
+            log INFO "Command ran for ${runtime}s, treating as disconnect and reconnecting..."
+            attempt=1
+            delay="${ZEBRASTREAM_RETRY_DELAY}"
+            continue
+        fi
+
+        if [ "$attempt" -eq "$max_attempts" ]; then
+            log WARN "Attempt $attempt/$max_attempts failed, stopping..."
+            log ERROR "Max attempts reached"
+            return 1
+        fi
+
         log WARN "Attempt $attempt/$max_attempts failed, retrying in ${delay}s..."
         sleep "$delay"
         attempt=$((attempt + 1))
         delay=$((delay * 2))
     done
-
-    if [ "$attempt" -eq "$max_attempts" ]; then
-        log ERROR "Max attempts reached"
-        return 1
-    fi
 }
 
 # Main loop
 while true; do
     while true; do
-        log INFO "Starting new session"
+        log INFO "Starting new connect session"
         
         # Connect with retry logic
         connect_to_server() {
